@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+{% block title %}Pano · PDGM İş Takip{% endblock %}
+
+{% block content %}
+<div class="sayfa-shell panel-sayfa">
+    <section class="sayfa-baslik sayfa-hero panel-hero">
+        <div>
+            <p class="ust-etiket">CANLI ÜRETİM PANOSU</p>
+            <h1>İş Durumu</h1>
+            <div class="panel-canli-satir">
+                <span class="panel-canli">Güncel pano</span>
+                <span class="panel-guncelleme">Son görüntüleme: {{ guncelleme }} · {{ bugun }}</span>
+                {% if sayac.gecikme %}<span class="durum-rozet kotu">{{ sayac.gecikme }} geciken açık kart</span>{% endif %}
+            </div>
+        </div>
+        <button id="panel-yenile" class="buton buton-hayalet" type="button">Yenile</button>
+    </section>
+
+    <section class="istatistik-grid" aria-label="İş durumu özeti">
+        <article class="istatistik kart-plana"><span>Plana Alındı</span><strong>{{ sayac.plana_alindi }}</strong></article>
+        <article class="istatistik kart-dizgide"><span>Dizgide</span><strong>{{ sayac.dizgide }}</strong></article>
+        <article class="istatistik kart-hazir"><span>Hazır</span><strong>{{ sayac.hazir }}</strong></article>
+        <article class="istatistik kart-teslim"><span>Teslim Edildi</span><strong>{{ sayac.teslim }}</strong></article>
+    </section>
+
+    <section class="arac-cubugu panel-kutu panel-arac-cubugu">
+        <div class="arama panel-arama-alani">
+            <label for="panel-kart-ara">Kart ara</label>
+            <input id="panel-kart-ara" type="search" placeholder="Talep no, stok no, talep sahibi, operatör..." autocomplete="off">
+        </div>
+        <div class="panel-filtre-alani">
+            <div class="filtreler" role="group" aria-label="Durum filtresi">
+                <button class="filtre" data-panel-filtre="AKTIF" type="button">Aktif</button>
+                <button class="filtre" data-panel-filtre="PLANA ALINDI" type="button">Plana Alındı</button>
+                <button class="filtre" data-panel-filtre="DİZGİDE" type="button">Dizgide</button>
+                <button class="filtre" data-panel-filtre="HAZIR" type="button">Hazır</button>
+                <button class="filtre" data-panel-filtre="TESLİM EDİLDİ" type="button">Teslim Edildi</button>
+                <button class="filtre aktif" data-panel-filtre="HEPSI" type="button">Hepsi</button>
+            </div>
+            <div class="panel-filtre-alt">
+                <span id="panel-sonuc-sayisi"></span>
+                <button id="panel-temizle" class="metin-buton" type="button" hidden>Filtreleri temizle</button>
+            </div>
+        </div>
+    </section>
+
+    <section id="panel-aktif-grid" class="pano-grid panel-aktif-grid">
+        <article class="panel-kutu panel-bolum" data-panel-bolum data-durum="DİZGİDE">
+            <div class="panel-baslik">
+                <div>
+                    <p class="ust-etiket">AKTİF ÜRETİM</p>
+                    <h2>Dizgide</h2>
+                    <p class="panel-aciklama">Üretimi devam eden kartlar.</p>
+                </div>
+                <span class="sayi-rozet">{{ dizgide|length }}</span>
+            </div>
+
+            {% if dizgide %}
+            <div class="kart-listesi">
+                {% for k in dizgide %}
+                <article class="is-karti panel-is-karti {{ k.renk }}" data-panel-kart data-durum="DİZGİDE"
+                         data-arama="{{ ((k.talep_no or '') ~ ' ' ~ (k.stok_no or '') ~ ' ' ~ (k.talep_sahibi or '') ~ ' ' ~ (k.operator or '') ~ ' ' ~ (k.aciklama or '') ~ ' ' ~ (k.pcb or ''))|lower }}">
+                    <div class="is-karti-ust">
+                        <div>
+                            <strong>{{ k.talep_no or "Talep yok" }}</strong>
+                            <span>{{ k.stok_no or "Stok no yok" }}</span>
+                        </div>
+                        <span class="durum-rozet {{ k.renk }}">{{ k.rozet }}</span>
+                    </div>
+                    <div class="kart-bilgiler">
+                        <span><b>Sahibi:</b> {{ k.talep_sahibi or "—" }}</span>
+                        <span><b>Plan teslim:</b> {{ k.plan_teslim|gun }}</span>
+                        <span><b>Operatör:</b> {{ k.operator or "—" }}</span>
+                    </div>
+                    <div class="ilerleme">
+                        <div class="ilerleme-ust"><span>{{ k.tamamlanan_adet }}/{{ k.toplam_adet }} adet</span><strong>%{{ k.adet_yuzde }}</strong></div>
+                        <div class="ilerleme-ray"><div class="ilerleme-dolgu" style="width: {{ [k.adet_yuzde, 100]|min }}%"></div></div>
+                    </div>
+                    {% if k.aciklama %}<p class="kart-not">{{ k.aciklama }}</p>{% endif %}
+                </article>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="bos-durum">Şu anda dizgide iş yok.</div>
+            {% endif %}
+        </article>
+
+        <article class="panel-kutu panel-bolum panel-hazir-kutu" data-panel-bolum data-durum="HAZIR">
+            <div class="panel-baslik">
+                <div>
+                    <p class="ust-etiket">TESLİM BEKLİYOR</p>
+                    <h2>Hazır</h2>
+                    <p class="panel-aciklama">Üretimi bitmiş, teslim alınmayı bekleyen kartlar.</p>
+                </div>
+                <span class="sayi-rozet">{{ hazir|length }}</span>
+            </div>
+
+            {% if hazir %}
+            <div class="mini-liste">
+                {% for k in hazir %}
+                <div class="mini-satir panel-mini-satir" data-panel-kart data-durum="HAZIR"
+                     data-arama="{{ ((k.talep_no or '') ~ ' ' ~ (k.stok_no or '') ~ ' ' ~ (k.talep_sahibi or '') ~ ' ' ~ (k.operator or '') ~ ' ' ~ (k.aciklama or ''))|lower }}">
+                    <div>
+                        <strong>{{ k.talep_no or "—" }} · {{ k.stok_no or "—" }}</strong>
+                        <span>{{ k.talep_sahibi or "Talep sahibi yok" }}</span>
+                        <small>{{ k.toplam_adet }} adet · Plan teslim {{ k.plan_teslim|gun }}</small>
+                    </div>
+                    <div class="mini-sag">
+                        <span class="durum-rozet {{ k.renk }}">{{ k.rozet }}</span>
+                        <small>Üretim bitiş {{ k.bitis_zamani|gun }}</small>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="bos-durum">Teslim bekleyen hazır kart yok.</div>
+            {% endif %}
+        </article>
+    </section>
+
+    <section class="panel-kutu panel-bolum" data-panel-bolum data-durum="PLANA ALINDI">
+        <div class="panel-baslik">
+            <div>
+                <p class="ust-etiket">ÜRETİM SIRASI</p>
+                <h2>Plana Alınan İşler</h2>
+                <p class="panel-aciklama">Dizgiye alınmayı bekleyen ilk 12 kart.</p>
+            </div>
+            <span class="sayi-rozet">{{ plana_alindi|length }}</span>
+        </div>
+
+        {% if plana_alindi %}
+        <div class="plan-liste">
+            {% for k in plana_alindi %}
+            <div class="plan-satir" data-panel-kart data-durum="PLANA ALINDI"
+                 data-arama="{{ ((k.talep_no or '') ~ ' ' ~ (k.stok_no or '') ~ ' ' ~ (k.talep_sahibi or '') ~ ' ' ~ (k.pcb or ''))|lower }}">
+                <div class="plan-sira">{{ k.sira or loop.index }}</div>
+                <div>
+                    <strong>{{ k.talep_no or "—" }}</strong>
+                    <span>{{ k.stok_no or "—" }}</span>
+                </div>
+                <span>{{ k.talep_sahibi or "—" }}</span>
+                <span>{{ k.toplam_adet }} adet</span>
+                <span>{{ k.plan_baslama|gun }}</span>
+                <span class="durum-rozet {{ k.renk }}">{{ k.rozet }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="bos-durum">Plana alınmış bekleyen kart yok.</div>
+        {% endif %}
+    </section>
+
+    <section class="panel-kutu panel-bolum" data-panel-bolum data-durum="TESLİM EDİLDİ">
+        <div class="panel-baslik">
+            <div>
+                <p class="ust-etiket">SON HAREKETLER</p>
+                <h2>Son Teslim Edilenler</h2>
+                <p class="panel-aciklama">Yakın zamanda fiziksel teslimi tamamlanan kartlar.</p>
+            </div>
+            <span class="sayi-rozet">{{ teslim_edilen|length }}</span>
+        </div>
+
+        {% if teslim_edilen %}
+        <div class="tablo-kapsayici">
+            <table>
+                <thead><tr><th>Talep No</th><th>Stok No</th><th>Adet</th><th>Teslim</th><th>Operatör</th><th>Değerlendirme</th></tr></thead>
+                <tbody>
+                {% for k in teslim_edilen %}
+                    <tr data-panel-kart data-durum="TESLİM EDİLDİ"
+                        data-arama="{{ ((k.talep_no or '') ~ ' ' ~ (k.stok_no or '') ~ ' ' ~ (k.talep_sahibi or '') ~ ' ' ~ (k.operator or '') ~ ' ' ~ (k.aciklama or ''))|lower }}">
+                        <td><strong>{{ k.talep_no or "—" }}</strong></td>
+                        <td>{{ k.stok_no or "—" }}</td>
+                        <td>{{ k.toplam_adet }}</td>
+                        <td>{{ (k.gerceklesen_teslim or k.teslim_zamani)|gun }}</td>
+                        <td>{{ k.operator or "—" }}</td>
+                        <td><span class="durum-rozet {{ k.renk }}">{{ k.rozet }}</span></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="bos-durum">Henüz teslim edilen kart yok.</div>
+        {% endif %}
+    </section>
+
+    <div id="panel-arama-bos" class="bos-durum" hidden>Arama ve filtreye uyan kart bulunamadı.</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+    const arama = document.getElementById("panel-kart-ara");
+    const filtreler = [...document.querySelectorAll("[data-panel-filtre]")];
+    const kartlar = [...document.querySelectorAll("[data-panel-kart]")];
+    const bolumler = [...document.querySelectorAll("[data-panel-bolum]")];
+    const sonuc = document.getElementById("panel-sonuc-sayisi");
+    const temizle = document.getElementById("panel-temizle");
+    const bos = document.getElementById("panel-arama-bos");
+    const aktifGrid = document.getElementById("panel-aktif-grid");
+
+    const FILTRE_KEY = "pdgm-panel-filtre";
+    const ARAMA_KEY = "pdgm-panel-arama";
+    const SCROLL_KEY = "pdgm-panel-scroll";
+    let aktifFiltre = sessionStorage.getItem(FILTRE_KEY) || "HEPSI";
+
+    function durumUygun(durum) {
+        if (aktifFiltre === "HEPSI") return true;
+        if (aktifFiltre === "AKTIF") return ["PLANA ALINDI", "DİZGİDE", "HAZIR"].includes(durum);
+        return durum === aktifFiltre;
+    }
+
+    function filtrele() {
+        const metin = (arama.value || "").trim().toLocaleLowerCase("tr-TR");
+        let gorunen = 0;
+
+        kartlar.forEach((kart) => {
+            const uygun = durumUygun(kart.dataset.durum) && (!metin || kart.dataset.arama.includes(metin));
+            kart.hidden = !uygun;
+            if (uygun) gorunen += 1;
+        });
+
+        bolumler.forEach((bolum) => {
+            const bolumKartlari = [...bolum.querySelectorAll("[data-panel-kart]")];
+            const durumUygunMu = durumUygun(bolum.dataset.durum);
+            bolum.hidden = !durumUygunMu || (bolumKartlari.length > 0 && !bolumKartlari.some((kart) => !kart.hidden));
+        });
+
+        if (aktifGrid) {
+            const gorunenBolumler = [...aktifGrid.querySelectorAll("[data-panel-bolum]")].filter((b) => !b.hidden);
+            aktifGrid.hidden = gorunenBolumler.length === 0;
+            [...aktifGrid.querySelectorAll("[data-panel-bolum]")].forEach((b) => {
+                b.style.gridColumn = gorunenBolumler.length === 1 && !b.hidden ? "1 / -1" : "";
+            });
+        }
+
+        sonuc.textContent = gorunen ? `${gorunen} kart gösteriliyor` : "Sonuç bulunamadı";
+        bos.hidden = gorunen !== 0;
+        temizle.hidden = !metin && aktifFiltre === "HEPSI";
+    }
+
+    function filtreSec(deger) {
+        aktifFiltre = deger;
+        sessionStorage.setItem(FILTRE_KEY, deger);
+        filtreler.forEach((buton) => {
+            const secili = buton.dataset.panelFiltre === deger;
+            buton.classList.toggle("aktif", secili);
+            buton.setAttribute("aria-pressed", secili ? "true" : "false");
+        });
+        filtrele();
+    }
+
+    function scrollKaydet() {
+        sessionStorage.setItem(SCROLL_KEY, String(window.scrollY));
+    }
+
+    arama.value = sessionStorage.getItem(ARAMA_KEY) || "";
+    arama.addEventListener("input", () => {
+        sessionStorage.setItem(ARAMA_KEY, arama.value || "");
+        filtrele();
+    });
+    filtreler.forEach((buton) => buton.addEventListener("click", () => filtreSec(buton.dataset.panelFiltre)));
+    temizle.addEventListener("click", () => {
+        arama.value = "";
+        sessionStorage.removeItem(ARAMA_KEY);
+        filtreSec("HEPSI");
+        arama.focus();
+    });
+    document.getElementById("panel-yenile").addEventListener("click", () => {
+        scrollKaydet();
+        window.location.reload();
+    });
+
+    const kayitliScroll = sessionStorage.getItem(SCROLL_KEY);
+    if (kayitliScroll !== null) {
+        sessionStorage.removeItem(SCROLL_KEY);
+        window.scrollTo(0, Number(kayitliScroll) || 0);
+    }
+
+    filtreSec(filtreler.some((b) => b.dataset.panelFiltre === aktifFiltre) ? aktifFiltre : "HEPSI");
+    window.setTimeout(() => {
+        scrollKaydet();
+        window.location.reload();
+    }, 30000);
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+
+{% block title %}Monitör · PDGM İş Takip{% endblock %}
+{% block body_class %}monitor-body{% endblock %}
+
+{% block content %}
+<div class="monitor-sayfa">
+
+    <section class="monitor-ust">
+        <div>
+            <p class="ust-etiket">ATÖLYE CANLI GÖRÜNÜMÜ</p>
+            <h1>Üretim Monitörü</h1>
+            <p class="monitor-aciklama">
+                Aktif üretim ve üretim sırası.
+            </p>
+        </div>
+
+        <div class="monitor-zaman">
+            <span id="monitor-saat">{{ guncelleme }}</span>
+            <small>
+                {{ bugun }} · Son veri yenileme {{ guncelleme }}
+            </small>
+        </div>
+    </section>
+
+    <section class="monitor-grid">
+
+        <!-- ============================================================
+             DİZGİDE
+        ============================================================ -->
+
+        <article class="panel-kutu monitor-bolum monitor-dizgide">
+
+            <div class="panel-baslik monitor-bolum-baslik">
+                <div>
+                    <p class="ust-etiket">AKTİF ÜRETİM</p>
+                    <h2>DİZGİDE</h2>
+                </div>
+
+                <span class="sayi-rozet">
+                    {{ dizgide|length }}
+                </span>
+            </div>
+
+            {% if dizgide %}
+
+            <div class="monitor-liste monitor-dizgide-liste {% if dizgide|length >= 3 %}uc-dizgi{% endif %}"
+                data-monitor-grup="dizgide"
+                data-sayfa-boyutu="3">
+
+                {% for k in dizgide %}
+
+                <article class="monitor-kart {{ k.renk }}" data-monitor-kart>
+
+                    <div class="monitor-kart-ust">
+
+                        <div class="monitor-talep">
+                            <span>TALEP</span>
+                            <strong>
+                                {{ k.talep_no or "—" }}
+                            </strong>
+                        </div>
+
+                        <span class="durum-rozet {{ k.renk }}">
+                            {{ k.rozet }}
+                        </span>
+
+                    </div>
+
+                    <h3>
+                        {{ k.stok_no or "Stok no yok" }}
+                    </h3>
+
+                    <p class="monitor-sahip">
+                        {{ k.talep_sahibi or "Talep sahibi belirtilmemiş" }}
+                    </p>
+
+                    <div class="monitor-adet">
+                        <strong>
+                            {{ k.tamamlanan_adet }}
+                            /
+                            {{ k.toplam_adet }}
+                        </strong>
+
+                        <span>
+                            adet tamamlandı
+                        </span>
+                    </div>
+
+                    <div class="ilerleme monitor-ilerleme">
+
+                        <div class="ilerleme-ust">
+                            <span>
+                                Üretim ilerlemesi
+                            </span>
+
+                            <strong>
+                                %{{ k.adet_yuzde }}
+                            </strong>
+                        </div>
+
+                        <div class="ilerleme-ray">
+                            <div
+                                class="ilerleme-dolgu"
+                                style="width: {{ [k.adet_yuzde, 100]|min }}%">
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="monitor-meta">
+
+                        <span>
+                            <small>Plan teslim</small>
+                            <strong>
+                                {{ k.plan_teslim|gun }}
+                            </strong>
+                        </span>
+
+                    </div>
+
+                </article>
+
+                {% endfor %}
+
+            </div>
+
+            {% else %}
+
+            <div class="bos-durum monitor-bos">
+                Şu anda dizgide kart bulunmuyor.
+            </div>
+
+            {% endif %}
+
+        </article>
+
+
+        <!-- ============================================================
+             PLANA ALINDI
+        ============================================================ -->
+
+        <article class="panel-kutu monitor-bolum monitor-plana">
+
+            <div class="panel-baslik monitor-bolum-baslik">
+
+                <div>
+                    <p class="ust-etiket">ÜRETİM KUYRUĞU</p>
+                    <h2>PLANA ALINDI</h2>
+                </div>
+
+                <span class="sayi-rozet">
+                    {{ plana_alindi|length }}
+                </span>
+
+            </div>
+
+            {% if plana_alindi %}
+
+            <div class="monitor-liste monitor-plan-liste"
+                data-monitor-grup="plan"
+                data-sayfa-boyutu="6">
+
+                {% for k in plana_alindi %}
+
+                <article class="monitor-plan-kart {{ k.renk }}" data-monitor-kart>
+
+                    <div class="monitor-plan-sira">
+                        {{ k.sira or loop.index }}
+                    </div>
+
+                    <div class="monitor-plan-icerik">
+
+                        <div class="monitor-plan-ust">
+
+                            <div>
+                                <span>TALEP</span>
+                                <strong>
+                                    {{ k.talep_no or "—" }}
+                                </strong>
+                            </div>
+
+                            <span class="durum-rozet {{ k.renk }}">
+                                {{ k.rozet }}
+                            </span>
+
+                        </div>
+
+                        <h3>
+                            {{ k.stok_no or "Stok no yok" }}
+                        </h3>
+
+                        <p>
+                            {{ k.talep_sahibi or "Talep sahibi belirtilmemiş" }}
+                        </p>
+
+                        <div class="monitor-plan-meta">
+
+                            <span>
+                                <small>Adet</small>
+                                <strong>
+                                    {{ k.toplam_adet }}
+                                </strong>
+                            </span>
+
+                            <span>
+                                <small>Başlangıç</small>
+                                <strong>
+                                    {{ k.plan_baslama|gun }}
+                                </strong>
+                            </span>
+
+                            <span>
+                                <small>Teslim</small>
+                                <strong>
+                                    {{ k.plan_teslim|gun }}
+                                </strong>
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                </article>
+
+                {% endfor %}
+
+            </div>
+
+            {% else %}
+
+            <div class="bos-durum monitor-bos">
+                Plana alınmış bekleyen kart yok.
+            </div>
+
+            {% endif %}
+
+        </article>
+
+    </section>
+
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+(() => {
+    const saat = document.getElementById("monitor-saat");
+
+    function saatiGuncelle() {
+        if (!saat) return;
+
+        saat.textContent = new Intl.DateTimeFormat("tr-TR", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit"
+        }).format(new Date());
+    }
+
+    function rotasyonBaslat(grup) {
+        const kartlar = [...grup.querySelectorAll("[data-monitor-kart]")];
+        const sayfaBoyutu = Number(grup.dataset.sayfaBoyutu || 0);
+
+        if (!sayfaBoyutu || kartlar.length <= sayfaBoyutu) {
+            return;
+        }
+
+        const sayfaSayisi = Math.ceil(
+            kartlar.length / sayfaBoyutu
+        );
+
+        let aktifSayfa = 0;
+
+        function sayfayiGoster() {
+            const baslangic = aktifSayfa * sayfaBoyutu;
+            const bitis = baslangic + sayfaBoyutu;
+
+            kartlar.forEach((kart, index) => {
+                kart.hidden = !(
+                    index >= baslangic &&
+                    index < bitis
+                );
+            });
+        }
+
+        sayfayiGoster();
+
+        window.setInterval(() => {
+            aktifSayfa = (aktifSayfa + 1) % sayfaSayisi;
+            sayfayiGoster();
+        }, 5000);
+    }
+
+    saatiGuncelle();
+
+    window.setInterval(
+        saatiGuncelle,
+        1000
+    );
+
+    document
+        .querySelectorAll("[data-monitor-grup]")
+        .forEach(rotasyonBaslat);
+
+    window.setTimeout(
+        () => window.location.reload(),
+        30000
+    );
+})();
+</script>
+{% endblock %}

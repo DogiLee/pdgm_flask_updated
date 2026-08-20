@@ -1,0 +1,439 @@
+{% extends "base.html" %}
+{% block title %}Operatör · PDGM İş Takip{% endblock %}
+
+{% block content %}
+<div class="sayfa-shell operator-sayfa">
+    <section class="sayfa-baslik sayfa-hero">
+        <div>
+            <p class="ust-etiket">OPERATÖR EKRANI</p>
+            <h1>Kart İşlemleri</h1>
+            <p class="soluk">Üretimi başlatın, tamamlanan adedi kaydedin, HAZIR ve TESLİM EDİLDİ geçişlerini yönetin.</p>
+        </div>
+    </section>
+
+    <section class="istatistik-grid" aria-label="Durum özeti">
+        <article class="istatistik kart-plana"><span>Plana Alındı</span><strong>{{ sayac.plana_alindi }}</strong></article>
+        <article class="istatistik kart-dizgide"><span>Dizgide</span><strong>{{ sayac.dizgide }}</strong></article>
+        <article class="istatistik kart-hazir"><span>Hazır</span><strong>{{ sayac.hazir }}</strong></article>
+        <article class="istatistik kart-teslim"><span>Teslim Edildi</span><strong>{{ sayac.teslim }}</strong></article>
+    </section>
+
+    <section class="arac-cubugu panel-kutu operator-arac-cubugu">
+        <div class="arama">
+            <label for="kart-ara">Kart ara</label>
+            <input id="kart-ara" type="search" placeholder="Talep no, stok no, talep sahibi, PCB..." autocomplete="off">
+        </div>
+
+        <div class="operator-filtre-alani">
+            <div class="filtreler" role="group" aria-label="Durum filtresi">
+                <button class="filtre aktif" data-filtre="AKTIF" type="button">Aktif</button>
+                <button class="filtre" data-filtre="PLANA ALINDI" type="button">Plana Alındı</button>
+                <button class="filtre" data-filtre="DİZGİDE" type="button">Dizgide</button>
+                <button class="filtre" data-filtre="HAZIR" type="button">Hazır</button>
+                <button class="filtre" data-filtre="TESLİM EDİLDİ" type="button">Teslim Edildi</button>
+                <button class="filtre" data-filtre="HEPSI" type="button">Hepsi</button>
+            </div>
+            <div class="operator-filtre-meta">
+                <span id="operator-sonuc"></span>
+                <button id="operator-temizle" class="operator-temizle" type="button" hidden>Filtreleri temizle</button>
+            </div>
+        </div>
+    </section>
+
+    <section id="operator-kartlari" class="operator-grid">
+    {% for k in kartlar %}
+        <article class="operator-kart {{ k.renk }}"
+                 data-kart
+                 data-durum="{{ k.durum }}"
+                 data-arama="{{ ((k.talep_no or '') ~ ' ' ~ (k.stok_no or '') ~ ' ' ~ (k.talep_sahibi or '') ~ ' ' ~ (k.pcb or '') ~ ' ' ~ (k.operator or '') ~ ' ' ~ (k.aciklama or ''))|lower }}">
+
+            <div class="operator-kart-ust">
+                <div>
+                    <span class="ust-etiket">{{ k.talep_no or "TALEP YOK" }}</span>
+                    <h2>{{ k.stok_no or "Stok no yok" }}</h2>
+                    <p>{{ k.talep_sahibi or "Talep sahibi yok" }}</p>
+                </div>
+                <div class="operator-rozetler">
+                    <span class="durum-rozet {{ k.renk }}">{{ k.rozet }}</span>
+                    {% if k.kaynakta_yok %}<span class="durum-rozet uyari">Kaynak Excel'de yok</span>{% endif %}
+                </div>
+            </div>
+
+            <div class="durum-satiri">
+                <span><b>Durum:</b> {{ k.durum }}</span>
+                <span><b>Kaynak:</b> {{ k.kaynak_durumu or "—" }}</span>
+            </div>
+
+            <div class="bilgi-grid">
+                <div><span>Toplam</span><strong>{{ k.toplam_adet }}</strong></div>
+                <div><span>Tamamlanan</span><strong>{{ k.tamamlanan_adet }}</strong></div>
+                <div><span>Kalan</span><strong>{{ k.kalan_adet }}</strong></div>
+                <div><span>Plan Teslim</span><strong>{{ k.plan_teslim|gun }}</strong></div>
+            </div>
+
+            <div class="ilerleme">
+                <div class="ilerleme-ust">
+                    <span>Üretim ilerlemesi</span>
+                    <strong>%{{ k.adet_yuzde }}</strong>
+                </div>
+                <div class="ilerleme-ray">
+                    <div class="ilerleme-dolgu" style="width: {{ [k.adet_yuzde, 100]|min }}%"></div>
+                </div>
+            </div>
+
+            {% if k.aciklama %}<p class="kart-not"><b>Not:</b> {{ k.aciklama }}</p>{% endif %}
+
+            <div class="kart-ek-bilgi">
+                {% if k.pcb %}<span>PCB: {{ k.pcb }}</span>{% endif %}
+                {% if k.operator %}<span>Son işlem: {{ k.operator }}</span>{% endif %}
+                {% if k.bitis_zamani %}<span>Üretim bitiş: {{ k.bitis_zamani|gun }}</span>{% endif %}
+            </div>
+
+            <div class="kart-aksiyonlar">
+                {% if k.durum == "PLANA ALINDI" %}
+                    <button class="buton buton-ana" type="button" data-baslat
+                            data-id="{{ k.id }}" data-kalan="{{ k.kalan_adet }}"
+                            data-talep="{{ k.talep_no or '' }}" data-stok="{{ k.stok_no or '' }}">
+                        Dizgiye Al
+                    </button>
+                {% elif k.durum == "DİZGİDE" and k.kalan_adet > 0 %}
+                    <button class="buton buton-ana" type="button" data-bitir
+                            data-id="{{ k.id }}" data-kalan="{{ k.kalan_adet }}"
+                            data-talep="{{ k.talep_no or '' }}" data-stok="{{ k.stok_no or '' }}">
+                        Adet Bitir
+                    </button>
+                {% elif k.durum == "DİZGİDE" and k.kalan_adet == 0 %}
+                    <button class="buton buton-basari" type="button" data-hazirla
+                            data-id="{{ k.id }}" data-talep="{{ k.talep_no or '' }}">
+                        Hazıra Al
+                    </button>
+                {% elif k.durum == "HAZIR" %}
+                    <button class="buton buton-basari" type="button" data-teslim
+                            data-id="{{ k.id }}" data-talep="{{ k.talep_no or '' }}">
+                        Teslim Edildi
+                    </button>
+                {% endif %}
+
+                <button class="buton buton-hayalet" type="button" data-not
+                        data-id="{{ k.id }}" data-not-mevcut="{{ k.aciklama or '' }}"
+                        data-talep="{{ k.talep_no or '' }}">Not</button>
+            </div>
+        </article>
+    {% else %}
+        <div class="bos-durum tam-satir">Görüntülenecek kart yok.</div>
+    {% endfor %}
+    </section>
+
+    <div id="operator-bos" class="bos-durum" hidden>Arama ve filtreye uyan kart bulunamadı.</div>
+</div>
+
+<dialog id="baslat-dialog" class="modal">
+    <form method="dialog" class="modal-kutu" id="baslat-form">
+        <div class="modal-baslik">
+            <div><p class="ust-etiket">DİZGİYE AL</p><h2 id="baslat-baslik">Kart</h2></div>
+            <button class="ikon-buton" type="button" data-dialog-kapat aria-label="Kapat">×</button>
+        </div>
+        <input type="hidden" id="baslat-id">
+        <div class="alan">
+            <label for="baslat-adet">Dizgiye alınacak adet</label>
+            <input type="number" id="baslat-adet" min="1" required>
+            <small id="baslat-kalan"></small>
+        </div>
+        <div class="alan">
+            <label for="baslat-not">Not <span class="soluk">(opsiyonel)</span></label>
+            <textarea id="baslat-not" rows="3"></textarea>
+        </div>
+        <div class="modal-aksiyon">
+            <button type="button" class="buton buton-hayalet" data-dialog-kapat>Vazgeç</button>
+            <button type="submit" class="buton buton-ana">Dizgiye Al</button>
+        </div>
+    </form>
+</dialog>
+
+<dialog id="bitir-dialog" class="modal">
+    <form method="dialog" class="modal-kutu" id="bitir-form">
+        <div class="modal-baslik">
+            <div><p class="ust-etiket">ÜRETİM ADEDİ</p><h2 id="bitir-baslik">Kart</h2></div>
+            <button class="ikon-buton" type="button" data-dialog-kapat aria-label="Kapat">×</button>
+        </div>
+        <input type="hidden" id="bitir-id">
+        <div class="alan">
+            <label for="bitir-adet">Tamamlanan adet</label>
+            <input type="number" id="bitir-adet" min="1" required>
+            <small id="bitir-kalan"></small>
+        </div>
+        <div class="alan">
+            <label for="bitir-not">Not <span class="soluk">(opsiyonel)</span></label>
+            <textarea id="bitir-not" rows="3"></textarea>
+        </div>
+        <div class="modal-aksiyon">
+            <button type="button" class="buton buton-hayalet" data-dialog-kapat>Vazgeç</button>
+            <button type="submit" class="buton buton-ana">Kaydet</button>
+        </div>
+    </form>
+</dialog>
+
+<dialog id="not-dialog" class="modal">
+    <form method="dialog" class="modal-kutu" id="not-form">
+        <div class="modal-baslik">
+            <div><p class="ust-etiket">KART NOTU</p><h2 id="not-baslik">Not Düzenle</h2></div>
+            <button class="ikon-buton" type="button" data-dialog-kapat aria-label="Kapat">×</button>
+        </div>
+        <input type="hidden" id="not-id">
+        <div class="alan">
+            <label for="not-metin">Not</label>
+            <textarea id="not-metin" rows="5"></textarea>
+        </div>
+        <div class="modal-aksiyon">
+            <button type="button" class="buton buton-hayalet" data-dialog-kapat>Vazgeç</button>
+            <button type="submit" class="buton buton-ana">Kaydet</button>
+        </div>
+    </form>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+    const kartAra = document.getElementById("kart-ara");
+    const filtreButonlari = [...document.querySelectorAll("[data-filtre]")];
+    const kartlar = [...document.querySelectorAll("[data-kart]")];
+    const sonuc = document.getElementById("operator-sonuc");
+    const temizle = document.getElementById("operator-temizle");
+    const bos = document.getElementById("operator-bos");
+
+    const FILTRE_KEY = "pdgm-op-filtre";
+    const ARAMA_KEY = "pdgm-op-arama";
+    const SCROLL_KEY = "pdgm-op-scroll";
+    let aktifFiltre = sessionStorage.getItem(FILTRE_KEY) || "AKTIF";
+
+    function aktifDurum(durum) {
+        return ["PLANA ALINDI", "DİZGİDE", "HAZIR"].includes(durum);
+    }
+
+    function durumUygunMu(durum) {
+        if (aktifFiltre === "HEPSI") return true;
+        if (aktifFiltre === "AKTIF") return aktifDurum(durum);
+        return durum === aktifFiltre;
+    }
+
+    function filtrele() {
+        const arama = (kartAra.value || "").trim().toLocaleLowerCase("tr-TR");
+        let gorunen = 0;
+
+        for (const kart of kartlar) {
+            const uygun = durumUygunMu(kart.dataset.durum) && (!arama || kart.dataset.arama.includes(arama));
+            kart.hidden = !uygun;
+            if (uygun) gorunen += 1;
+        }
+
+        sonuc.textContent = `${gorunen} kart gösteriliyor`;
+        bos.hidden = gorunen !== 0;
+        temizle.hidden = !arama && aktifFiltre === "AKTIF";
+    }
+
+    function filtreSec(deger) {
+        aktifFiltre = deger;
+        sessionStorage.setItem(FILTRE_KEY, deger);
+        filtreButonlari.forEach((buton) => {
+            const secili = buton.dataset.filtre === deger;
+            buton.classList.toggle("aktif", secili);
+            buton.setAttribute("aria-pressed", secili ? "true" : "false");
+        });
+        filtrele();
+    }
+
+    function durumuSaklaVeYenile() {
+        sessionStorage.setItem(ARAMA_KEY, kartAra.value || "");
+        sessionStorage.setItem(SCROLL_KEY, String(window.scrollY));
+        window.setTimeout(() => window.location.reload(), 350);
+    }
+
+    async function kartAksiyonu(url, kartId, onayMesaji, basariMesaji) {
+        if (onayMesaji && !window.confirm(onayMesaji)) return false;
+        const data = await pdgmFetch(url, {
+            method: "POST",
+            body: JSON.stringify({kart_id: Number(kartId)})
+        });
+        toast(data.mesaj || basariMesaji);
+        return true;
+    }
+
+    kartAra.value = sessionStorage.getItem(ARAMA_KEY) || "";
+    kartAra.addEventListener("input", () => {
+        sessionStorage.setItem(ARAMA_KEY, kartAra.value || "");
+        filtrele();
+    });
+
+    filtreButonlari.forEach((buton) => buton.addEventListener("click", () => filtreSec(buton.dataset.filtre)));
+    temizle.addEventListener("click", () => {
+        kartAra.value = "";
+        sessionStorage.removeItem(ARAMA_KEY);
+        filtreSec("AKTIF");
+        kartAra.focus();
+    });
+
+    const gecerliFiltre = filtreButonlari.some((buton) => buton.dataset.filtre === aktifFiltre);
+    filtreSec(gecerliFiltre ? aktifFiltre : "AKTIF");
+
+    const kayitliScroll = sessionStorage.getItem(SCROLL_KEY);
+    if (kayitliScroll !== null) {
+        sessionStorage.removeItem(SCROLL_KEY);
+        window.scrollTo(0, Number(kayitliScroll) || 0);
+    }
+
+    document.querySelectorAll("[data-baslat]").forEach((buton) => {
+        buton.addEventListener("click", () => {
+            const kalan = Number(buton.dataset.kalan || 1);
+            document.getElementById("baslat-id").value = buton.dataset.id;
+            document.getElementById("baslat-adet").value = kalan;
+            document.getElementById("baslat-adet").max = kalan;
+            document.getElementById("baslat-not").value = "";
+            document.getElementById("baslat-kalan").textContent = `En fazla ${kalan} adet`;
+            document.getElementById("baslat-baslik").textContent = `${buton.dataset.talep || "Kart"} · ${buton.dataset.stok || ""}`;
+            document.getElementById("baslat-dialog").showModal();
+        });
+    });
+
+    document.querySelectorAll("[data-bitir]").forEach((buton) => {
+        buton.addEventListener("click", () => {
+            const kalan = Number(buton.dataset.kalan || 1);
+            document.getElementById("bitir-id").value = buton.dataset.id;
+            document.getElementById("bitir-adet").value = kalan;
+            document.getElementById("bitir-adet").max = kalan;
+            document.getElementById("bitir-not").value = "";
+            document.getElementById("bitir-kalan").textContent = `Kalan ${kalan} adet`;
+            document.getElementById("bitir-baslik").textContent = `${buton.dataset.talep || "Kart"} · ${buton.dataset.stok || ""}`;
+            document.getElementById("bitir-dialog").showModal();
+        });
+    });
+
+    document.querySelectorAll("[data-not]").forEach((buton) => {
+        buton.addEventListener("click", () => {
+            document.getElementById("not-id").value = buton.dataset.id;
+            document.getElementById("not-metin").value = buton.dataset.notMevcut || "";
+            document.getElementById("not-baslik").textContent = `${buton.dataset.talep || "Kart"} · Not`;
+            document.getElementById("not-dialog").showModal();
+        });
+    });
+
+    document.querySelectorAll("[data-hazirla]").forEach((buton) => {
+        buton.addEventListener("click", async () => {
+            try {
+                const tamam = await kartAksiyonu(
+                    "/api/hazirla",
+                    buton.dataset.id,
+                    `${buton.dataset.talep || "Bu kart"} HAZIR durumuna alınsın mı?`,
+                    "Kart HAZIR durumuna alındı."
+                );
+                if (tamam) durumuSaklaVeYenile();
+            } catch (hata) {
+                hataMesaji(hata);
+            }
+        });
+    });
+
+    document.querySelectorAll("[data-teslim]").forEach((buton) => {
+        buton.addEventListener("click", async () => {
+            try {
+                const tamam = await kartAksiyonu(
+                    "/api/teslim-et",
+                    buton.dataset.id,
+                    `${buton.dataset.talep || "Bu kart"} fiziksel olarak teslim edildi mi?`,
+                    "Teslim kaydedildi."
+                );
+                if (tamam) durumuSaklaVeYenile();
+            } catch (hata) {
+                hataMesaji(hata);
+            }
+        });
+    });
+
+    document.getElementById("baslat-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const submit = event.submitter;
+        submit.disabled = true;
+        try {
+            const data = await pdgmFetch("/api/basla", {
+                method: "POST",
+                body: JSON.stringify({
+                    kart_id: Number(document.getElementById("baslat-id").value),
+                    adet: Number(document.getElementById("baslat-adet").value),
+                    not: document.getElementById("baslat-not").value.trim()
+                })
+            });
+            toast(data.mesaj || "Kart DİZGİDE durumuna alındı.");
+            dialogKapat(document.getElementById("baslat-dialog"));
+            durumuSaklaVeYenile();
+        } catch (hata) {
+            hataMesaji(hata);
+        } finally {
+            submit.disabled = false;
+        }
+    });
+
+    document.getElementById("bitir-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const submit = event.submitter;
+        submit.disabled = true;
+        try {
+            const kartId = Number(document.getElementById("bitir-id").value);
+            const data = await pdgmFetch("/api/bitir", {
+                method: "POST",
+                body: JSON.stringify({
+                    kart_id: kartId,
+                    adet: Number(document.getElementById("bitir-adet").value),
+                    not: document.getElementById("bitir-not").value.trim()
+                })
+            });
+            dialogKapat(document.getElementById("bitir-dialog"));
+
+            if (data.uretim_bitti) {
+                const hazir = window.confirm(
+                    "Üretim adedinin tamamı bitti. Kart HAZIR durumuna alınsın mı?\n\n" +
+                    "Hayır derseniz kart DİZGİDE kalır ve daha sonra 'Hazıra Al' butonuyla geçiş yapılabilir."
+                );
+                if (hazir) {
+                    await pdgmFetch("/api/hazirla", {
+                        method: "POST",
+                        body: JSON.stringify({kart_id: kartId})
+                    });
+                    toast("Üretim tamamlandı ve kart HAZIR durumuna alındı.");
+                } else {
+                    toast(data.mesaj, "uyari");
+                }
+            } else {
+                toast(data.mesaj);
+            }
+            durumuSaklaVeYenile();
+        } catch (hata) {
+            hataMesaji(hata);
+        } finally {
+            submit.disabled = false;
+        }
+    });
+
+    document.getElementById("not-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const submit = event.submitter;
+        submit.disabled = true;
+        try {
+            await pdgmFetch("/api/not", {
+                method: "POST",
+                body: JSON.stringify({
+                    kart_id: Number(document.getElementById("not-id").value),
+                    not: document.getElementById("not-metin").value.trim()
+                })
+            });
+            toast("Not kaydedildi.");
+            dialogKapat(document.getElementById("not-dialog"));
+            durumuSaklaVeYenile();
+        } catch (hata) {
+            hataMesaji(hata);
+        } finally {
+            submit.disabled = false;
+        }
+    });
+})();
+</script>
+{% endblock %}

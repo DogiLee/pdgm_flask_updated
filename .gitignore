@@ -1,0 +1,13 @@
+.env
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+
+data/
+!data/.gitkeep
+
+*.xlsx.bozuk_*
+data/BASLATMA_HATASI.txt
